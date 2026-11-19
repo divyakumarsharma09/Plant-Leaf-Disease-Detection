@@ -24,3 +24,35 @@ def _find_last_conv_layer(model):
                     # Return the *sub-model* layer name; caller handles that.
                     return layer.name
     raise ValueError("No Conv2D layer found in model.")
+    
+
+def make_gradcam_heatmap(img_array, model, pred_index=None):
+    """
+    Produce a Grad-CAM heatmap as a 2D numpy array in [0, 1].
+
+    img_array : preprocessed batch, shape (1, H, W, 3)
+    model     : trained Keras model
+    pred_index: class index to explain (default: top prediction)
+    """
+    last_conv_layer_name = _find_last_conv_layer(model)
+    last_conv_layer = model.get_layer(last_conv_layer_name)
+
+    grad_model = tf.keras.models.Model(
+        inputs=model.inputs,
+        outputs=[last_conv_layer.output, model.output],
+    )
+
+    with tf.GradientTape() as tape:
+        conv_outputs, predictions = grad_model(img_array)
+        if pred_index is None:
+            pred_index = tf.argmax(predictions[0])
+        class_channel = predictions[:, pred_index]
+
+    grads = tape.gradient(class_channel, conv_outputs)
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+
+    conv_outputs = conv_outputs[0]
+    heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
+    heatmap = tf.squeeze(heatmap)
+    heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-8)
+    return heatmap.numpy()
