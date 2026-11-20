@@ -56,3 +56,18 @@ def make_gradcam_heatmap(img_array, model, pred_index=None):
     heatmap = tf.squeeze(heatmap)
     heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-8)
     return heatmap.numpy()
+    
+
+def overlay_heatmap(original_image_path: str, heatmap: np.ndarray,
+                    output_path: str, alpha: float = 0.4):
+    """Save a JPG that overlays the Grad-CAM heatmap on the original image."""
+    img = cv2.imread(original_image_path)
+    img = cv2.resize(img, (config.IMG_SIZE, config.IMG_SIZE))
+
+    heatmap = np.uint8(255 * heatmap)
+    heatmap = cv2.resize(heatmap, (config.IMG_SIZE, config.IMG_SIZE))
+    heatmap_color = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+
+    overlay = cv2.addWeighted(img, 1 - alpha, heatmap_color, alpha, 0)
+    cv2.imwrite(output_path, overlay)
+    return output_path
