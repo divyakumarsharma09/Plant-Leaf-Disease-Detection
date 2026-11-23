@@ -9,8 +9,10 @@ the regions the model attended to when making its prediction.
 import numpy as np
 import tensorflow as tf
 import cv2
-from PIL import Image
+
 import config
+
+
 def _find_last_conv_layer(model):
     """Walk the model backwards and return the last Conv2D layer's name.
     Handles wrapped Keras Application backbones (Sequential / Functional)."""
@@ -24,7 +26,7 @@ def _find_last_conv_layer(model):
                     # Return the *sub-model* layer name; caller handles that.
                     return layer.name
     raise ValueError("No Conv2D layer found in model.")
-    
+
 
 def make_gradcam_heatmap(img_array, model, pred_index=None):
     """
@@ -56,7 +58,7 @@ def make_gradcam_heatmap(img_array, model, pred_index=None):
     heatmap = tf.squeeze(heatmap)
     heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-8)
     return heatmap.numpy()
-    
+
 
 def overlay_heatmap(original_image_path: str, heatmap: np.ndarray,
                     output_path: str, alpha: float = 0.4):
